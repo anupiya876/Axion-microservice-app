@@ -1,0 +1,37 @@
+apiVersion: autoscaling/v2              # v2 supports multiple metrics and the "behavior" block; always use v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: axion-ui-hpa
+spec:
+  scaleTargetRef:                       # WHAT to scale
+    apiVersion: apps/v1
+    kind: Deployment
+    name: axion-ui-deployment
+  minReplicas: 2                        # floor: never go below this (2-3 minimum for HA)
+  maxReplicas: 5                        # ceiling: protects your budget and downstream systems (DB connections!)
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60          # target: average CPU across Pods = 60% OF THE POD'S CPU *REQUEST*   
+  behaviour:                            # controls HOW FAST it scales
+    scaleUp:
+      stabilizationWindowSeconds: 0     # react to spikes immediately
+    policies:
+    - type: Percent
+      value: 100                        # allowed to double the Pod count...
+      periodSeconds: 60                 # ...every 60 seconds    
+    scaleDown:
+      stabilizationWindowSeconds: 300.  # wait 5 min of consistently low load before removing Pods
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 100.            
+      - type: Pods                     
+        value: 1                        # remove at most 1 Pod...
+        periodSeconds: 120              # ...per minute (gentle scale-down)
+
+    
+    
