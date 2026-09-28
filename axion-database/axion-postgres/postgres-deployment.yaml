@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: axion-postgres-deployment
+  labels:
+    app: axion-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: axion-postgres
+  template:
+    metadata:
+      labels:
+        app: axion-postgres
+    spec:
+      nodeSelector: 
+        kubernetes.azure.com/agentpool: anunode
+      containers:
+      - name: axion-postgres-container
+        image: postgres:latest
+        env:
+        - name: POSTGRES_USER
+          value: "admin"
+        - name: POSTGRES_PASSWORD
+          value: "admin123"
+        - name: POSTGRES_DB
+          value: "axiondb"
+          
+        resources:
+          requests:
+            memory: "200Mi"
+            cpu: "150m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        ports:
+        - containerPort: 5432

@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: axion-pgadmin-deployment
+  labels:
+    app: axion-pgadmin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: axion-pgadmin
+  template:
+    metadata:
+      labels:
+        app: axion-pgadmin
+    spec:
+      nodeSelector: 
+        kubernetes.azure.com/agentpool: anunode
+      containers:
+      - name: axion-pgadmin-container
+        image: dpage/pgadmin4:latest
+        env:
+        - name: PGADMIN_DEFAULT_EMAIL
+          value: "admin@axion.com"
+        - name: PGADMIN_DEFAULT_PASSWORD
+          value: "AxionTest#2026!Pg"
+        resources:
+          requests:
+            memory: "350Mi"
+            cpu: "250m"
+          limits:
+            memory: "400Mi"
+            cpu: "300m"
+        ports:
+        - containerPort: 80
