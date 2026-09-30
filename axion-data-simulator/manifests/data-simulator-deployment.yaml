@@ -19,11 +19,9 @@ spec:
       containers:
       - name: simulator-container
         image: anuacr.azurecr.io/axion-data-simulator:v1
-        env:
-        - name: API_URL
-          value: "http://ingestion-service:8095/api/v1/telemetry/ingest"
-        - name: INTERVAL_SECONDS
-          value: "5"
+        envFrom:
+        - configMapRef:
+            name: simulator-config
         resources:
           requests:
             memory: "120Mi"

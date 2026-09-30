@@ -19,14 +19,9 @@ spec:
       containers:
       - name: axion-postgres-container
         image: postgres:latest
-        env:
-        - name: POSTGRES_USER
-          value: "admin"
-        - name: POSTGRES_PASSWORD
-          value: "admin123"
-        - name: POSTGRES_DB
-          value: "axiondb"
-          
+        envFrom:
+        - secretRef:
+            name: postgres-secret
         resources:
           requests:
             memory: "200Mi"

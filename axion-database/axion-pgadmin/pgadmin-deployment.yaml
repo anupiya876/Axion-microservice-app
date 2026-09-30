@@ -19,11 +19,9 @@ spec:
       containers:
       - name: axion-pgadmin-container
         image: dpage/pgadmin4:latest
-        env:
-        - name: PGADMIN_DEFAULT_EMAIL
-          value: "admin@axion.com"
-        - name: PGADMIN_DEFAULT_PASSWORD
-          value: "AxionTest#2026!Pg"
+        envFrom:   # bulk import pairs with secretRef
+        - secretRef:
+            name: pgadmin-secret
         resources:
           requests:
             memory: "350Mi"

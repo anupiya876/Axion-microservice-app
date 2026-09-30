@@ -19,9 +19,12 @@ spec:
       containers:
       - name: ingestion-container
         image: anuacr.azurecr.io/axion-ingestion:v2
-        env:
+        env:    #single variable pairs with secretKeyRef
           - name: DATABASE_URL
-            value: "postgresql://admin:admin123@axion-postgres-service:5432/axiondb"
+            valueFrom:
+              secretKeyRef:
+                name: ingestion-secret
+                key: DATABASE_URL
         resources:
           requests:
             memory: "256Mi"

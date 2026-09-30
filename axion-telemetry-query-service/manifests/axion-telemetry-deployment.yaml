@@ -21,8 +21,11 @@ spec:
         image: anuacr.azurecr.io/axion-telemetry-query:v1
         env:
           - name: DATABASE_URL
-            value: "postgresql://admin:admin123@axion-postgres-service:5432/axiondb"
-        resources:
+            valueFrom: 
+              secretKeyRef:
+                name: telemetry-query-secret
+                key: DATABASE_URL
+        resources:        
           requests:
             memory: "120Mi"
             cpu: "50m"

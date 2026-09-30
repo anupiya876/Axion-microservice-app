@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: simulator-config
+data:
+  LOG_LEVEL: "info"
+  API_URL: "http://ingestion-service:8095/api/v1/telemetry/ingest"
+  INTERVAL_SECONDS: "5"
