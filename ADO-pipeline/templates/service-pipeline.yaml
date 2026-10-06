@@ -1,0 +1,160 @@
+parameters:
+- name: servicePath            # monorepo folder, e.g. axion-ui
+  type: string
+- name: imageRepo              # ACR repository, e.g. axion-ui
+  type: string
+- name: acrConnection          # Docker Registry service connection
+  type: string
+  default: 'anuacr-connection'
+- name: sonarConnection        # SonarQube service connection
+  type: string
+  default: 'sonarqube-connection'
+- name: armConnection          # Azure Resource Manager service connection
+  type: string
+  default: 'azure-axion-connection'
+- name: aksResourceGroup
+  type: string
+  default: 'rg-aks-env'
+- name: aksName
+  type: string
+  default: 'test-aks-anu'
+- name: trivySeverity          # severities that fail the build
+  type: string
+  default: 'HIGH,CRITICAL'
+
+stages:
+# =====================================================================
+# CI
+# =====================================================================
+- stage: CI
+  variables:
+  - group: axion-security       # BLACKDUCK_URL, BLACKDUCK_API_TOKEN (secret)
+  - name: imageName
+    value: anuacr.azurecr.io/${{ parameters.imageRepo }}:$(Build.BuildId)
+  jobs:
+
+  # ---------- Job 1: SonarQube ----------
+  - job: SonarQube
+    displayName: SonarQube scan
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - checkout: self
+      fetchDepth: 0               # full history so Sonar can track new code / blame
+
+    - task: SonarQubePrepare@7
+      inputs:
+        SonarQube: ${{ parameters.sonarConnection }}
+        scannerMode: 'cli'
+        configMode: 'manual'
+        cliProjectKey: 'axion-${{ parameters.imageRepo }}'
+        cliProjectName: 'axion-${{ parameters.imageRepo }}'
+        cliSources: '${{ parameters.servicePath }}'
+        extraProperties: |
+          sonar.qualitygate.wait=true      # fail the job if the quality gate fails
+          sonar.qualitygate.timeout=300
+
+    - task: SonarQubeAnalyze@7
+      displayName: Run analysis
+
+    - task: SonarQubePublish@7
+      displayName: Publish quality gate result
+      inputs:
+        pollingTimeoutSec: '300'
+
+  # ---------- Job 2: Black Duck ----------
+  - job: BlackDuck
+    displayName: Black Duck scan
+    dependsOn: SonarQube
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - checkout: self
+
+    - bash: |
+        bash <(curl -s -L https://detect.blackduck.com/detect10.sh) \
+          --blackduck.url="$BLACKDUCK_URL" \
+          --blackduck.api.token="$BLACKDUCK_API_TOKEN" \
+          --detect.project.name="axion-${{ parameters.imageRepo }}" \
+          --detect.project.version.name="$(Build.SourceBranchName)" \
+          --detect.source.path="$(Build.SourcesDirectory)/${{ parameters.servicePath }}" \
+          --detect.policy.check.fail.on.severities=BLOCKER,CRITICAL
+      displayName: Run Black Duck Detect
+      env:
+        BLACKDUCK_URL: $(BLACKDUCK_URL)
+        BLACKDUCK_API_TOKEN: $(BLACKDUCK_API_TOKEN)   # secrets must be mapped explicitly
+
+  # ---------- Job 3: Build → Trivy → Push ----------
+  - job: BuildScanPush
+    displayName: Build, Trivy scan, push
+    dependsOn: BlackDuck
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - checkout: self
+
+    - task: Docker@2
+      displayName: Build image
+      inputs:
+        containerRegistry: ${{ parameters.acrConnection }}
+        repository: ${{ parameters.imageRepo }}
+        command: build
+        Dockerfile: ${{ parameters.servicePath }}/Dockerfile
+        buildContext: ${{ parameters.servicePath }}
+        tags: |
+          $(Build.BuildId)
+
+    - bash: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+          | sh -s -- -b /usr/local/bin
+        trivy --version
+      displayName: Install Trivy
+
+    - bash: |
+        trivy image \
+          --exit-code 1 \
+          --severity ${{ parameters.trivySeverity }} \
+          --ignore-unfixed \
+          --no-progress \
+          "$(imageName)"
+      displayName: Trivy scan (fails on ${{ parameters.trivySeverity }})
+
+    - task: Docker@2
+      displayName: Push to ACR
+      inputs:
+        containerRegistry: ${{ parameters.acrConnection }}
+        repository: ${{ parameters.imageRepo }}
+        command: push
+        tags: |
+          $(Build.BuildId)
+
+    - publish: ${{ parameters.servicePath }}/manifests
+      artifact: manifests
+      displayName: Publish manifests
+
+# =====================================================================
+# CD
+# =====================================================================
+- stage: CD
+  dependsOn: CI
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployToAKS
+    environment: axion-dev
+    pool:
+      vmImage: ubuntu-latest
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: KubernetesManifest@1
+            displayName: Deploy ${{ parameters.imageRepo }}
+            inputs:
+              action: deploy
+              connectionType: azureResourceManager
+              azureSubscriptionConnection: ${{ parameters.armConnection }}
+              azureResourceGroup: ${{ parameters.aksResourceGroup }}
+              kubernetesCluster: ${{ parameters.aksName }}
+              namespace: default
+              manifests: $(Pipeline.Workspace)/manifests/*.yaml
+              containers: anuacr.azurecr.io/${{ parameters.imageRepo }}:$(Build.BuildId)

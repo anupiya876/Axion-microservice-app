@@ -34,3 +34,20 @@ spec:
             cpu: "250m"
         ports:
         - containerPort: 8000
+        readinessProbe:                          # checks the real dependency — DB reachable?
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        livenessProbe:                           # checks only "is the process itself responsive?"
+          httpGet:
+            path: /live
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 3    
+

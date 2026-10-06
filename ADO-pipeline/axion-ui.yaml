@@ -1,0 +1,13 @@
+trigger:
+  branches:
+    include: [main]
+  paths:
+    include: [axion-ui/*]   # only runs when the UI folder changes
+
+pr: none
+
+stages:
+- template: /ADO-pipeline/templates/service-pipeline.yaml
+  parameters:
+    servicePath: axion-ui
+    imageRepo: axion-ui

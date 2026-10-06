@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from config import settings
 from database import connect_db, disconnect_db, insert_telemetry, fetch_telemetry
@@ -64,8 +65,24 @@ app.add_middleware(
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Liveness / readiness probe."""
-    return {"status": "UP"}
+    """
+    Readiness check — confirms the service can actually reach PostgreSQL,
+    not just that the process is running. Used by the Kubernetes
+    readinessProbe (and liveness, if pointed here) for this Deployment.
+    """
+    try:
+        await fetch_telemetry(device_id=None, limit=1)
+        return {"status": "ready"}
+    except Exception as exc:
+        logger.error("Health check failed: %s", exc)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "not ready"},
+        )
+
+@app.get("/live", tags=["Health"])
+async def liveness_check():
+    return {"status": "alive"}   # no DB call — only fails if the process itself is truly unresponsive
 
 
 @app.get(
