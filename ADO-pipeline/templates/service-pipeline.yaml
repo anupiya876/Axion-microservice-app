@@ -138,6 +138,10 @@ stages:
         deploy:
           steps:
           - task: KubeloginInstaller@0
+            inputs:
+              gitHubConnection: 'anupiya876'
+            env:
+              USE_AUTHORIZATION_FOR_API_CALL: true
 
           - task: KubernetesManifest@1
             displayName: Deploy ${{ parameters.imageRepo }}

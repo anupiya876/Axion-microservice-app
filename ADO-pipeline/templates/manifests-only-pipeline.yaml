@@ -26,6 +26,10 @@ stages:
           - checkout: self
 
           - task: KubeloginInstaller@0
+            inputs:
+              gitHubConnection: 'anupiya876'
+            env:
+              USE_AUTHORIZATION_FOR_API_CALL: true
 
           - ${{ each path in parameters.manifestPaths }}:
             - task: KubernetesManifest@1
