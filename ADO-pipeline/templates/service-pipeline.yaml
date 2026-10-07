@@ -137,6 +137,8 @@ stages:
       runOnce:
         deploy:
           steps:
+          - task: KubeloginInstaller@0
+
           - task: KubernetesManifest@1
             displayName: Deploy ${{ parameters.imageRepo }}
             inputs:

@@ -25,6 +25,8 @@ stages:
           steps:
           - checkout: self
 
+          - task: KubeloginInstaller@0
+
           - ${{ each path in parameters.manifestPaths }}:
             - task: KubernetesManifest@1
               displayName: Apply ${{ path }}
