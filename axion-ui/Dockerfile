@@ -12,6 +12,9 @@ RUN npm run build
 # Stage 2: Serve the application with Nginx
 FROM nginx:alpine
 
+# Pull latest Alpine security patches - base image tag may lag behind apk repo
+RUN apk update && apk upgrade --no-cache
+
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
