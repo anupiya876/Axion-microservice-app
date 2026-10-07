@@ -4,7 +4,7 @@ metadata:
   name: axion-premium-ssd
 provisioner: disk.csi.azure.com
 parameters:
-  sku: Premium_LRS
+  skuName: Premium_LRS
 reclaimPolicy: Retain
 volumeBindingMode: Immediate
 allowVolumeExpansion: true

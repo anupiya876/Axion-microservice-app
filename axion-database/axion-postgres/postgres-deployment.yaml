@@ -18,10 +18,13 @@ spec:
         kubernetes.azure.com/agentpool: anunode
       containers:
       - name: axion-postgres-container
-        image: postgres:latest
+        image: postgres:16
         envFrom:
         - secretRef:
             name: postgres-secret
+        env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
         resources:
           requests:
             memory: "200Mi"
