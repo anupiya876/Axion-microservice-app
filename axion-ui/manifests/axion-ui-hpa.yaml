@@ -16,20 +16,20 @@ spec:
       target:
         type: Utilization
         averageUtilization: 60          # target: average CPU across Pods = 60% OF THE POD'S CPU *REQUEST*   
-  behaviour:                            # controls HOW FAST it scales
+  behavior:                             # controls HOW FAST it scales
     scaleUp:
       stabilizationWindowSeconds: 0     # react to spikes immediately
-    policies:
-    - type: Percent
-      value: 100                        # allowed to double the Pod count...
-      periodSeconds: 60                 # ...every 60 seconds    
+      policies:
+      - type: Percent
+        value: 100                      # allowed to double the Pod count...
+        periodSeconds: 60               # ...every 60 seconds
     scaleDown:
-      stabilizationWindowSeconds: 300.  # wait 5 min of consistently low load before removing Pods
+      stabilizationWindowSeconds: 300   # wait 5 min of consistently low load before removing Pods
       policies:
       - type: Percent
         value: 50
-        periodSeconds: 100.            
-      - type: Pods                     
+        periodSeconds: 100
+      - type: Pods
         value: 1                        # remove at most 1 Pod...
         periodSeconds: 120              # ...per minute (gentle scale-down)
 
