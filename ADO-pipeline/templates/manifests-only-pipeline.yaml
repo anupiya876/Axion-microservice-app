@@ -27,7 +27,7 @@ stages:
 
           - task: KubeloginInstaller@0
             inputs:
-              gitHubConnection: 'anupiya876'
+              gitHubConnection: 'github-pat-connection'
             env:
               USE_AUTHORIZATION_FOR_API_CALL: true
 
