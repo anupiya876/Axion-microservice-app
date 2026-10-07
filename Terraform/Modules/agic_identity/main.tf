@@ -12,9 +12,9 @@ resource "azurerm_role_assignment" "resource_group_reader" {
   principal_id         = var.agic_identity_object_id
 }
 
-resource "azurerm_role_assignment" "aks_rbac_writer" {
+resource "azurerm_role_assignment" "aks_rbac_cluster_admin" {
   scope                = var.aks_cluster_id
-  role_definition_name = "Azure Kubernetes Service RBAC Writer"
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
   principal_id         = data.azurerm_client_config.current.object_id
 }
 

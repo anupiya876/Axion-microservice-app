@@ -6,9 +6,12 @@ parameters:
 - name: acrConnection          # Docker Registry service connection
   type: string
   default: 'anuacr-connection'
-- name: sonarConnection        # SonarQube service connection
+- name: sonarConnection        # SonarCloud service connection
   type: string
-  default: 'sonarqube-connection'
+  default: 'sonarcloud-connection'
+- name: sonarCloudOrganization  # SonarCloud organization key (from sonarcloud.io)
+  type: string
+  default: 'anusingh876'
 - name: armConnection          # Azure Resource Manager service connection
   type: string
   default: 'azure-axion-connection'
@@ -28,7 +31,6 @@ stages:
 # =====================================================================
 - stage: CI
   variables:
-  - group: axion-security       # BLACKDUCK_URL, BLACKDUCK_API_TOKEN (secret)
   - name: imageName
     value: anuacr.azurecr.io/${{ parameters.imageRepo }}:$(Build.BuildId)
   jobs:
@@ -42,10 +44,11 @@ stages:
     - checkout: self
       fetchDepth: 0               # full history so Sonar can track new code / blame
 
-    - task: SonarQubePrepare@7
+    - task: SonarCloudPrepare@4
       inputs:
-        SonarQube: ${{ parameters.sonarConnection }}
-        scannerMode: 'cli'
+        SonarCloud: ${{ parameters.sonarConnection }}
+        organization: ${{ parameters.sonarCloudOrganization }}
+        scannerMode: 'CLI'
         configMode: 'manual'
         cliProjectKey: 'axion-${{ parameters.imageRepo }}'
         cliProjectName: 'axion-${{ parameters.imageRepo }}'
@@ -54,17 +57,17 @@ stages:
           sonar.qualitygate.wait=true      # fail the job if the quality gate fails
           sonar.qualitygate.timeout=300
 
-    - task: SonarQubeAnalyze@7
+    - task: SonarCloudAnalyze@4
       displayName: Run analysis
 
-    - task: SonarQubePublish@7
+    - task: SonarCloudPublish@4
       displayName: Publish quality gate result
       inputs:
         pollingTimeoutSec: '300'
 
-  # ---------- Job 2: Black Duck ----------
-  - job: BlackDuck
-    displayName: Black Duck scan
+  # ---------- Job 2: Build → Trivy → Push ----------
+  - job: BuildScanPush
+    displayName: Build, Trivy scan, push
     dependsOn: SonarQube
     pool:
       vmImage: ubuntu-latest
@@ -72,26 +75,19 @@ stages:
     - checkout: self
 
     - bash: |
-        bash <(curl -s -L https://detect.blackduck.com/detect10.sh) \
-          --blackduck.url="$BLACKDUCK_URL" \
-          --blackduck.api.token="$BLACKDUCK_API_TOKEN" \
-          --detect.project.name="axion-${{ parameters.imageRepo }}" \
-          --detect.project.version.name="$(Build.SourceBranchName)" \
-          --detect.source.path="$(Build.SourcesDirectory)/${{ parameters.servicePath }}" \
-          --detect.policy.check.fail.on.severities=BLOCKER,CRITICAL
-      displayName: Run Black Duck Detect
-      env:
-        BLACKDUCK_URL: $(BLACKDUCK_URL)
-        BLACKDUCK_API_TOKEN: $(BLACKDUCK_API_TOKEN)   # secrets must be mapped explicitly
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+          | sh -s -- -b /usr/local/bin
+        trivy --version
+      displayName: Install Trivy
 
-  # ---------- Job 3: Build → Trivy → Push ----------
-  - job: BuildScanPush
-    displayName: Build, Trivy scan, push
-    dependsOn: BlackDuck
-    pool:
-      vmImage: ubuntu-latest
-    steps:
-    - checkout: self
+    - bash: |
+        trivy fs \
+          --exit-code 1 \
+          --severity ${{ parameters.trivySeverity }} \
+          --ignore-unfixed \
+          --no-progress \
+          "${{ parameters.servicePath }}"
+      displayName: Trivy scan - source code (fails on ${{ parameters.trivySeverity }})
 
     - task: Docker@2
       displayName: Build image
@@ -105,19 +101,13 @@ stages:
           $(Build.BuildId)
 
     - bash: |
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-          | sh -s -- -b /usr/local/bin
-        trivy --version
-      displayName: Install Trivy
-
-    - bash: |
         trivy image \
           --exit-code 1 \
           --severity ${{ parameters.trivySeverity }} \
           --ignore-unfixed \
           --no-progress \
           "$(imageName)"
-      displayName: Trivy scan (fails on ${{ parameters.trivySeverity }})
+      displayName: Trivy scan - built image (fails on ${{ parameters.trivySeverity }})
 
     - task: Docker@2
       displayName: Push to ACR
