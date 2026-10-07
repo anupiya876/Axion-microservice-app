@@ -1,0 +1,38 @@
+parameters:
+- name: manifestPaths           # list of folders to apply, each glob-matched for *.yaml
+  type: object
+  default: []
+- name: armConnection          # Azure Resource Manager service connection
+  type: string
+  default: 'azure-axion-connection'
+- name: aksResourceGroup
+  type: string
+  default: 'rg-aks-env'
+- name: aksName
+  type: string
+  default: 'test-aks-anu'
+
+stages:
+- stage: Deploy
+  jobs:
+  - deployment: DeployManifests
+    environment: axion-dev
+    pool:
+      vmImage: ubuntu-latest
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - ${{ each path in parameters.manifestPaths }}:
+            - task: KubernetesManifest@1
+              displayName: Apply ${{ path }}
+              inputs:
+                action: deploy
+                connectionType: azureResourceManager
+                azureSubscriptionConnection: ${{ parameters.armConnection }}
+                azureResourceGroup: ${{ parameters.aksResourceGroup }}
+                kubernetesCluster: ${{ parameters.aksName }}
+                namespace: default
+                manifests: $(Build.SourcesDirectory)/${{ path }}/*.yaml

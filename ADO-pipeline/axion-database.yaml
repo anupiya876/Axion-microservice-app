@@ -1,0 +1,11 @@
+trigger: none        # manual trigger only — stateful service, don't reapply on every push
+
+pr: none
+
+stages:
+- template: /ADO-pipeline/templates/manifests-only-pipeline.yaml
+  parameters:
+    manifestPaths:
+      - shared-manifests
+      - axion-database/axion-postgres
+      - axion-database/axion-pgadmin
