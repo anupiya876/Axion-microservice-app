@@ -1,0 +1,37 @@
+appName: ingestion-service
+
+image:
+  repository: anuacr.azurecr.io/axion-ingestion
+  tag: v2
+
+replicas: 1
+port: 8000
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "300Mi"
+    cpu: "250m"
+
+secretRef: ingestion-secret
+
+service:
+  type: ClusterIP
+  port: 8095
+  targetPort: 8000
+
+readinessProbe:
+  path: /health
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+livenessProbe:
+  path: /live
+  initialDelaySeconds: 15
+  periodSeconds: 15
+  timeoutSeconds: 3
+  failureThreshold: 3

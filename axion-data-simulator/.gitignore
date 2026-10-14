@@ -1,3 +1,7 @@
 __pycache__/
 *.py[cod]
 .env
+
+# Helm dependency artifacts — regenerated via `helm dependency update`, don't commit
+**/helm/charts/*.tgz
+Chart.lock

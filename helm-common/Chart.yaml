@@ -1,0 +1,4 @@
+apiVersion: v2
+name: axion-common
+type: library
+version: 0.1.0

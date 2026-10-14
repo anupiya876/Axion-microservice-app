@@ -1,0 +1,1 @@
+{{ include "axion-common.service" (dict "Values" .Values.postgres "Chart" .Chart "Release" .Release) }}

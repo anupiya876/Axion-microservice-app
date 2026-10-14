@@ -1,0 +1,28 @@
+appName: telemetry-query
+
+image:
+  repository: anuacr.azurecr.io/axion-telemetry-query
+  tag: v1
+
+replicas: 1
+port: 8000
+
+resources:
+  requests:
+    memory: "120Mi"
+    cpu: "50m"
+  limits:
+    memory: "128Mi"
+    cpu: "250m"
+
+secretRef: telemetry-query-secret
+
+service:
+  type: ClusterIP
+  port: 9000
+  targetPort: 8000
+
+ingress:
+  host: telemetry-query.anupiyasingh.world
+  annotations:
+    appgw.ingress.kubernetes.io/health-probe-path: "/docs"

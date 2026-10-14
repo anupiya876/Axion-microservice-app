@@ -1,0 +1,8 @@
+apiVersion: v2
+name: axion-telemetry-query
+description: Helm chart for Axion Telemetry Query microservice
+version: 0.0.1
+dependencies:
+- name: axion-common
+  version: 0.1.0
+  repository: "file://../../helm-common"

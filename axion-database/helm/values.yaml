@@ -1,0 +1,61 @@
+postgres:
+  appName: axion-postgres
+  image:
+    repository: postgres
+    tag: "16"
+  replicas: 1
+  port: 5432
+  resources:
+    requests:
+      memory: "200Mi"
+      cpu: "150m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
+  secretRef: postgres-secret
+  extraEnv:
+    - name: PGDATA
+      value: /var/lib/postgresql/data/pgdata
+  volumeMounts:
+    - name: postgres-storage
+      mountPath: /var/lib/postgresql/data
+  volumes:
+    - name: postgres-storage
+      persistentVolumeClaim:
+        claimName: postgres-pvc
+  service:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+  pvc:
+    name: postgres-pvc
+    storage: 5Gi
+    storageClassName: axion-premium-ssd
+  secretName: postgres-secret
+  secretData: {}   # filled via --set at deploy time, never committed
+
+pgadmin:
+  appName: axion-pgadmin
+  image:
+    repository: dpage/pgadmin4
+    tag: latest
+  replicas: 1
+  port: 80
+  resources:
+    requests:
+      memory: "350Mi"
+      cpu: "250m"
+    limits:
+      memory: "400Mi"
+      cpu: "300m"
+  secretRef: pgadmin-secret
+  service:
+    type: LoadBalancer
+    port: 8080
+    targetPort: 80
+  secretName: pgadmin-secret
+  secretData: {}   # filled via --set at deploy time, never committed
+
+storageClass:
+  name: axion-premium-ssd
+  sku: Premium_LRS
