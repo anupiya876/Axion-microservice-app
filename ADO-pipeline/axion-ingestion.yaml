@@ -6,8 +6,12 @@ trigger:
 
 pr: none
 
+variables:
+- group: axion-ingestion-secrets
+
 stages:
 - template: /ADO-pipeline/templates/service-pipeline.yaml
   parameters:
     servicePath: axion-ingestion-service
     imageRepo: axion-ingestion
+    extraHelmSetArgs: '--set secretData.DATABASE_URL=$(DATABASE_URL)'

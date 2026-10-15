@@ -2,8 +2,17 @@ trigger: none        # manual trigger only — stateful service, don't reapply o
 
 pr: none
 
+variables:
+- group: axion-database-secrets
+
 stages:
 - template: /ADO-pipeline/templates/manifests-only-pipeline.yaml
   parameters:
     servicePath: axion-database
     releaseName: axion-database
+    extraHelmSetArgs: >-
+      --set postgres.secretData.POSTGRES_USER=$(POSTGRES_USER)
+      --set postgres.secretData.POSTGRES_PASSWORD=$(POSTGRES_PASSWORD)
+      --set postgres.secretData.POSTGRES_DB=$(POSTGRES_DB)
+      --set pgadmin.secretData.PGADMIN_DEFAULT_EMAIL=$(PGADMIN_DEFAULT_EMAIL)
+      --set pgadmin.secretData.PGADMIN_DEFAULT_PASSWORD=$(PGADMIN_DEFAULT_PASSWORD)
