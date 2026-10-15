@@ -113,4 +113,13 @@ module "agic_identity" {
 
 }
 
+module "pipeline_rbac" {
+  source = "../Modules/pipeline_rbac"
+
+  aks_cluster_id = module.aks.cluster_id
+  acr_id         = module.acr.acr_id
+  # axion-ado-deploy-sp — the ADO pipeline service connection's service principal
+  pipeline_sp_object_id = "690bb6d5-fe6a-46f2-95e1-8aeafe20593f"
+}
+
 
