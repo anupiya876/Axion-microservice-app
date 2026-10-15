@@ -16,7 +16,7 @@ resources:
     cpu: "250m"
 
 secretRef: telemetry-query-secret
-secretName: ingestion-secret
+secretName: telemetry-query-secret
 secretData: {}   # filled via --set at deploy time, never committed
 
 service:
