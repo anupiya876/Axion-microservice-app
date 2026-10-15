@@ -1,7 +1,8 @@
 parameters:
-- name: manifestPaths           # list of folders to apply, each glob-matched for *.yaml
-  type: object
-  default: []
+- name: servicePath             # folder containing the helm/ chart, e.g. axion-database
+  type: string
+- name: releaseName             # helm release name
+  type: string
 - name: armConnection          # Azure Resource Manager service connection
   type: string
   default: 'azure-axion-connection'
@@ -11,6 +12,9 @@ parameters:
 - name: aksName
   type: string
   default: 'test-aks-anu'
+- name: extraHelmSetArgs        # extra --set flags, e.g. for secret values from a variable group
+  type: string
+  default: ''
 
 stages:
 - stage: Deploy
@@ -25,20 +29,31 @@ stages:
           steps:
           - checkout: self
 
+          - task: HelmInstaller@1
+            inputs:
+              helmVersionToInstall: 4.3.0
+
           - task: KubeloginInstaller@0
             inputs:
               gitHubConnection: 'github-pat-connection'
             env:
               USE_AUTHORIZATION_FOR_API_CALL: true
 
-          - ${{ each path in parameters.manifestPaths }}:
-            - task: KubernetesManifest@1
-              displayName: Apply ${{ path }}
-              inputs:
-                action: deploy
-                connectionType: azureResourceManager
-                azureSubscriptionConnection: ${{ parameters.armConnection }}
-                azureResourceGroup: ${{ parameters.aksResourceGroup }}
-                kubernetesCluster: ${{ parameters.aksName }}
-                namespace: default
-                manifests: $(Build.SourcesDirectory)/${{ path }}/*.yaml
+          - task: AzureCLI@2
+            displayName: Helm deploy ${{ parameters.releaseName }}
+            inputs:
+              azureSubscription: ${{ parameters.armConnection }}
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group ${{ parameters.aksResourceGroup }} \
+                  --name ${{ parameters.aksName }} \
+                  --overwrite-existing
+
+                cd $(Build.SourcesDirectory)/${{ parameters.servicePath }}/helm
+                helm dependency build .
+                helm upgrade --install ${{ parameters.releaseName }} . \
+                  --namespace default \
+                  ${{ parameters.extraHelmSetArgs }} \
+                  --atomic --timeout 5m

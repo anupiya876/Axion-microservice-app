@@ -5,7 +5,5 @@ pr: none
 stages:
 - template: /ADO-pipeline/templates/manifests-only-pipeline.yaml
   parameters:
-    manifestPaths:
-      - shared-manifests
-      - axion-database/axion-postgres
-      - axion-database/axion-pgadmin
+    servicePath: axion-database
+    releaseName: axion-database

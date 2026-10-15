@@ -24,6 +24,9 @@ parameters:
 - name: trivySeverity          # severities that fail the build
   type: string
   default: 'HIGH,CRITICAL'
+- name: extraHelmSetArgs        # extra --set flags, e.g. for secret values from a variable group
+  type: string
+  default: ''
 
 stages:
 # =====================================================================
@@ -118,10 +121,6 @@ stages:
         tags: |
           $(Build.BuildId)
 
-    - publish: ${{ parameters.servicePath }}/manifests
-      artifact: manifests
-      displayName: Publish manifests
-
 # =====================================================================
 # CD
 # =====================================================================
@@ -137,20 +136,34 @@ stages:
       runOnce:
         deploy:
           steps:
+          - checkout: self
+
+          - task: HelmInstaller@1
+            inputs:
+              helmVersionToInstall: 4.3.0
+
           - task: KubeloginInstaller@0
             inputs:
               gitHubConnection: 'github-pat-connection'
             env:
               USE_AUTHORIZATION_FOR_API_CALL: true
 
-          - task: KubernetesManifest@1
-            displayName: Deploy ${{ parameters.imageRepo }}
+          - task: AzureCLI@2
+            displayName: Helm deploy ${{ parameters.imageRepo }}
             inputs:
-              action: deploy
-              connectionType: azureResourceManager
-              azureSubscriptionConnection: ${{ parameters.armConnection }}
-              azureResourceGroup: ${{ parameters.aksResourceGroup }}
-              kubernetesCluster: ${{ parameters.aksName }}
-              namespace: default
-              manifests: $(Pipeline.Workspace)/manifests/*.yaml
-              containers: anuacr.azurecr.io/${{ parameters.imageRepo }}:$(Build.BuildId)
+              azureSubscription: ${{ parameters.armConnection }}
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group ${{ parameters.aksResourceGroup }} \
+                  --name ${{ parameters.aksName }} \
+                  --overwrite-existing
+
+                cd $(Build.SourcesDirectory)/${{ parameters.servicePath }}/helm
+                helm dependency build .
+                helm upgrade --install ${{ parameters.imageRepo }} . \
+                  --namespace default \
+                  --set image.tag=$(Build.BuildId) \
+                  ${{ parameters.extraHelmSetArgs }} \
+                  --atomic --timeout 5m
