@@ -19,5 +19,5 @@ configMapRef: simulator-config
 configMapName: simulator-config
 configMapData:
   LOG_LEVEL: "info"
-  API_URL: "http://ingestion-service:8095/api/v1/telemetry/ingest"
+  API_URL: "http://ingestion-service-service:8095/api/v1/telemetry/ingest"
   INTERVAL_SECONDS: "5"
